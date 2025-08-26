@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
-// Temporary: Use direct ALB endpoint until API Gateway integration is fixed
-const API_BASE_URL = 'http://mirroros-alb-1426709742.us-east-2.elb.amazonaws.com/api';
+// Use API Gateway for production predictions with proper routing
+const API_BASE_URL = 'https://yyk4197cr6.execute-api.us-east-2.amazonaws.com/prod/api';
 
 function MirrorOSApp() {
   const [goalText, setGoalText] = useState('');
@@ -28,26 +28,16 @@ function MirrorOSApp() {
   const [authToken, setAuthToken] = useState(null);
   const [showChainOfThought, setShowChainOfThought] = useState(false);
 
-  // Get demo authentication token on app load
+  // Set demo authentication token on app load (simplified auth)
   useEffect(() => {
     const getDemoToken = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/auth/demo-login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ demo: true })
-        });
-
-        const data = await response.json();
-        if (response.ok && data.access_token) {
-          setAuthToken(data.access_token);
-        } else {
-          console.error('Failed to get demo token:', data);
-        }
+        // Set demo token directly for now (bypasses auth complexity)
+        setAuthToken('demo-token-mobile-2025');
+        console.log('✅ Demo authentication set');
       } catch (error) {
-        console.error('Demo login error:', error);
+        console.log('Auth setup error (proceeding anyway):', error);
+        setAuthToken('demo-token-mobile-2025'); // Fallback
       }
     };
 
@@ -89,11 +79,13 @@ function MirrorOSApp() {
           'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          goal: goalText.trim(),
-          context: contextText.trim(),
-          domain: domain,
-          confidence_level: confidenceLevel,
-          enhanced_grounding: enhancedGrounding
+          prediction_data: {
+            goal: goalText.trim(),
+            context: contextText.trim(),
+            domain: domain,
+            confidence_level: confidenceLevel,
+            enhanced_grounding: enhancedGrounding
+          }
         })
       });
 
@@ -104,10 +96,15 @@ function MirrorOSApp() {
           probability: data.probability || 0.5,
           narrative: data.narrative || data.explanation || 'Prediction completed successfully.',
           chain_of_thought: data.chain_of_thought,
+          math_breakdown: data.math_breakdown,
           factors: data.factors,
           risks: data.risks,
           statistical_analysis: data.statistical_analysis,
-          grounding_data: data.grounding_data
+          grounding_data: data.grounding_data,
+          key_success_factors: data.key_success_factors,
+          domain: data.domain || 'general',
+          confidence_level: data.confidence_level || 'standard',
+          outcome_category: data.outcome_category
         });
       } else {
         throw new Error(data.error || 'Prediction failed');
@@ -160,38 +157,83 @@ function MirrorOSApp() {
             textAlignVertical="top"
           />
 
-          <View style={styles.optionsRow}>
-            <View style={styles.optionGroup}>
-              <Text style={styles.optionLabel}>Domain</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={domain}
-                  onValueChange={setDomain}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Auto-detect" value="auto" />
-                  <Picker.Item label="Career" value="career" />
-                  <Picker.Item label="Dating" value="dating" />
-                  <Picker.Item label="Travel" value="travel" />
-                  <Picker.Item label="Finance" value="finance" />
-                  <Picker.Item label="Health" value="health" />
-                </Picker>
-              </View>
+          <View style={styles.optionsSection}>
+            <Text style={styles.sectionLabel}>Domain Selection</Text>
+            <View style={styles.emojiButtonGrid}>
+              <TouchableOpacity 
+                style={[styles.emojiButton, domain === 'auto' && styles.emojiButtonSelected]}
+                onPress={() => setDomain('auto')}
+              >
+                <Text style={styles.emojiButtonIcon}>🤖</Text>
+                <Text style={styles.emojiButtonLabel}>Auto</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.emojiButton, domain === 'finance' && styles.emojiButtonSelected]}
+                onPress={() => setDomain('finance')}
+              >
+                <Text style={styles.emojiButtonIcon}>💰</Text>
+                <Text style={styles.emojiButtonLabel}>Finance</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.emojiButton, domain === 'career' && styles.emojiButtonSelected]}
+                onPress={() => setDomain('career')}
+              >
+                <Text style={styles.emojiButtonIcon}>💼</Text>
+                <Text style={styles.emojiButtonLabel}>Career</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.emojiButton, domain === 'dating' && styles.emojiButtonSelected]}
+                onPress={() => setDomain('dating')}
+              >
+                <Text style={styles.emojiButtonIcon}>💕</Text>
+                <Text style={styles.emojiButtonLabel}>Dating</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.emojiButton, domain === 'health' && styles.emojiButtonSelected]}
+                onPress={() => setDomain('health')}
+              >
+                <Text style={styles.emojiButtonIcon}>💪</Text>
+                <Text style={styles.emojiButtonLabel}>Health</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.emojiButton, domain === 'travel' && styles.emojiButtonSelected]}
+                onPress={() => setDomain('travel')}
+              >
+                <Text style={styles.emojiButtonIcon}>✈️</Text>
+                <Text style={styles.emojiButtonLabel}>Travel</Text>
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.optionGroup}>
-              <Text style={styles.optionLabel}>Confidence</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={confidenceLevel}
-                  onValueChange={setConfidenceLevel}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Standard (90%)" value="standard" />
-                  <Picker.Item label="High (95%)" value="high" />
-                  <Picker.Item label="Conservative (99%)" value="conservative" />
-                </Picker>
-              </View>
+            
+            <Text style={styles.sectionLabel}>Confidence Level</Text>
+            <View style={styles.confidenceButtonRow}>
+              <TouchableOpacity 
+                style={[styles.confidenceButton, confidenceLevel === 'standard' && styles.confidenceButtonSelected]}
+                onPress={() => setConfidenceLevel('standard')}
+              >
+                <Text style={styles.confidenceButtonIcon}>🟢</Text>
+                <Text style={styles.confidenceButtonLabel}>Low</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.confidenceButton, confidenceLevel === 'high' && styles.confidenceButtonSelected]}
+                onPress={() => setConfidenceLevel('high')}
+              >
+                <Text style={styles.confidenceButtonIcon}>🟡</Text>
+                <Text style={styles.confidenceButtonLabel}>Medium</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.confidenceButton, confidenceLevel === 'conservative' && styles.confidenceButtonSelected]}
+                onPress={() => setConfidenceLevel('conservative')}
+              >
+                <Text style={styles.confidenceButtonIcon}>🔴</Text>
+                <Text style={styles.confidenceButtonLabel}>High</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -226,7 +268,31 @@ function MirrorOSApp() {
               <Text style={styles.probabilityText}>
                 Success Probability: {Math.round(result.probability * 100)}%
               </Text>
+              
+              {/* Domain and Confidence Info - Fixed styling */}
+              <View style={styles.metadataRow}>
+                <View style={styles.metadataItem}>
+                  <Text style={styles.metadataLabel}>Domain:</Text>
+                  <Text style={styles.metadataValue}>{result.domain || 'general'}</Text>
+                </View>
+                {result.outcome_category && (
+                  <View style={styles.metadataItem}>
+                    <Text style={styles.metadataLabel}>Outcome:</Text>
+                    <Text style={styles.metadataValue}>{result.outcome_category.replace(/_/g, ' ')}</Text>
+                  </View>
+                )}
+              </View>
+              
               <Text style={styles.resultText}>{result.narrative}</Text>
+              
+              {result.key_success_factors && result.key_success_factors.length > 0 && (
+                <View style={styles.successFactorsSection}>
+                  <Text style={styles.successFactorsTitle}>🎯 Key Success Factors:</Text>
+                  {result.key_success_factors.map((factor, idx) => (
+                    <Text key={idx} style={styles.successFactorText}>• {factor}</Text>
+                  ))}
+                </View>
+              )}
             </View>
 
             {result.chain_of_thought && (
@@ -244,21 +310,44 @@ function MirrorOSApp() {
                   <View style={styles.chainContent}>
                     {result.chain_of_thought.reasoning_steps && result.chain_of_thought.reasoning_steps.map((step, index) => (
                       <View key={index} style={styles.reasoningStep}>
-                        <Text style={styles.stepTitle}>🧠 {step.step_name}</Text>
-                        <Text style={styles.stepDescription}>{step.description}</Text>
-                        {step.weight && <Text style={styles.stepWeight}>Weight: {step.weight}%</Text>}
+                        <Text style={styles.stepDescription}>{step}</Text>
                       </View>
                     ))}
                     
-                    {result.statistical_analysis && (
+                    {result.math_breakdown && (
                       <View style={styles.analysisSection}>
-                        <Text style={styles.analysisTitle}>📊 Statistical Analysis</Text>
+                        <Text style={styles.analysisTitle}>🔢 Mathematical Analysis</Text>
                         <Text style={styles.analysisText}>
-                          Base Success Rate: {(result.statistical_analysis.base_success_rate * 100).toFixed(1)}%
+                          Base Probability: {(result.math_breakdown.base_probability * 100).toFixed(1)}%
                         </Text>
                         <Text style={styles.analysisText}>
-                          Sample Size: {result.statistical_analysis.sample_size} studies
+                          Final Score: {result.math_breakdown.logit_score?.toFixed(3)} logits
                         </Text>
+                        <Text style={styles.analysisText}>
+                          Final Probability: {(result.math_breakdown.final_probability * 100).toFixed(1)}%
+                        </Text>
+                        
+                        {result.math_breakdown.positive_factors && result.math_breakdown.positive_factors.length > 0 && (
+                          <View style={styles.factorSection}>
+                            <Text style={styles.factorTitle}>✅ Positive Factors:</Text>
+                            {result.math_breakdown.positive_factors.map((factor, idx) => (
+                              <Text key={idx} style={styles.factorText}>
+                                • {factor.name}: +{(factor.contribution * 100).toFixed(1)}%
+                              </Text>
+                            ))}
+                          </View>
+                        )}
+                        
+                        {result.math_breakdown.negative_factors && result.math_breakdown.negative_factors.length > 0 && (
+                          <View style={styles.factorSection}>
+                            <Text style={styles.factorTitle}>⚠️ Negative Factors:</Text>
+                            {result.math_breakdown.negative_factors.map((factor, idx) => (
+                              <Text key={idx} style={styles.factorText}>
+                                • {factor.name}: {(factor.contribution * 100).toFixed(1)}%
+                              </Text>
+                            ))}
+                          </View>
+                        )}
                       </View>
                     )}
                   </View>
@@ -342,25 +431,102 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 15,
+    gap: 10,
   },
   optionGroup: {
     flex: 1,
-    marginHorizontal: 5,
   },
   optionLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 5,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   pickerContainer: {
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
     backgroundColor: '#fff',
+    height: 50,
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   picker: {
-    height: 40,
+    height: 50,
+    color: '#333',
+    marginTop: -8,
+    marginBottom: -8,
+  },
+  optionsSection: {
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emojiButtonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    gap: 8,
+  },
+  emojiButton: {
+    width: '30%',
+    aspectRatio: 1,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+  },
+  emojiButtonSelected: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#007AFF',
+  },
+  emojiButtonIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  emojiButtonLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+  },
+  confidenceButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  confidenceButton: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+    padding: 12,
+    alignItems: 'center',
+  },
+  confidenceButtonSelected: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#007AFF',
+  },
+  confidenceButtonIcon: {
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  confidenceButtonLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
   },
   toggleRow: {
     flexDirection: 'row',
@@ -418,6 +584,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     lineHeight: 24,
+    marginTop: 10,
+  },
+  metadataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    marginBottom: 5,
+    paddingHorizontal: 5,
+  },
+  metadataItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  metadataLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  metadataValue: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
+    textAlign: 'center',
+    textTransform: 'capitalize',
   },
   clearButton: {
     backgroundColor: '#f0f0f0',
@@ -504,6 +695,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginBottom: 4,
+  },
+  factorSection: {
+    marginTop: 10,
+    padding: 8,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 6,
+  },
+  factorTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  factorText: {
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 2,
+    paddingLeft: 5,
+  },
+  successFactorsSection: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#e8f5e8',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#4CAF50',
+  },
+  successFactorsTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    marginBottom: 5,
+  },
+  successFactorText: {
+    fontSize: 13,
+    color: '#2E7D32',
+    marginBottom: 2,
   },
 });
 
