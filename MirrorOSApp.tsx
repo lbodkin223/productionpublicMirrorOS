@@ -17,12 +17,17 @@ import { Picker } from '@react-native-picker/picker';
 // Use environment-configured API URL
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.20.35.3:8080';
 
+// Debug logging
+console.log('🔍 API_BASE_URL:', API_BASE_URL);
+console.log('🔍 EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
+
 function MirrorOSApp() {
   const [goalText, setGoalText] = useState('');
   const [contextText, setContextText] = useState('');
   const [domain, setDomain] = useState('auto');
   const [confidenceLevel, setConfidenceLevel] = useState('standard');
   const [enhancedGrounding, setEnhancedGrounding] = useState(true);
+  const [llmDomainDetection, setLlmDomainDetection] = useState(true);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [authToken, setAuthToken] = useState(null);
@@ -72,6 +77,7 @@ function MirrorOSApp() {
       }
 
       // Make real API prediction call
+      console.log('🚀 Making request to:', `${API_BASE_URL}/predict`);
       const response = await fetch(`${API_BASE_URL}/predict`, {
         method: 'POST',
         headers: {
@@ -83,12 +89,16 @@ function MirrorOSApp() {
             context: contextText.trim(),
             domain: domain,
             confidence_level: confidenceLevel,
-            enhanced_grounding: enhancedGrounding
+            enhanced_grounding: enhancedGrounding,
+            use_llm_domain_detection: llmDomainDetection
           }
         })
       });
 
       const data = await response.json();
+      console.log('📦 Raw response data:', JSON.stringify(data, null, 2));
+      console.log('🎯 Response probability:', data.probability);
+      console.log('🧮 Math breakdown:', data.math_breakdown);
       
       if (response.ok) {
         setResult({
@@ -251,6 +261,16 @@ function MirrorOSApp() {
               onValueChange={setEnhancedGrounding}
               trackColor={{ false: '#ccc', true: '#007AFF' }}
               thumbColor={enhancedGrounding ? '#fff' : '#f4f3f4'}
+            />
+          </View>
+
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>LLM Domain Detection</Text>
+            <Switch
+              value={llmDomainDetection}
+              onValueChange={setLlmDomainDetection}
+              trackColor={{ false: '#ccc', true: '#007AFF' }}
+              thumbColor={llmDomainDetection ? '#fff' : '#f4f3f4'}
             />
           </View>
           
