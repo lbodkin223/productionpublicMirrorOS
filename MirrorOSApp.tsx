@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
-// Use API Gateway for production predictions with proper routing
-const API_BASE_URL = 'https://yyk4197cr6.execute-api.us-east-2.amazonaws.com/prod/api';
+// Use environment-configured API URL
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.20.35.3:8080';
 
 function MirrorOSApp() {
   const [goalText, setGoalText] = useState('');
@@ -76,7 +76,6 @@ function MirrorOSApp() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           prediction_data: {
@@ -193,11 +192,19 @@ function MirrorOSApp() {
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.emojiButton, domain === 'health' && styles.emojiButtonSelected]}
-                onPress={() => setDomain('health')}
+                style={[styles.emojiButton, domain === 'academic' && styles.emojiButtonSelected]}
+                onPress={() => setDomain('academic')}
+              >
+                <Text style={styles.emojiButtonIcon}>🎓</Text>
+                <Text style={styles.emojiButtonLabel}>Academic</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.emojiButton, domain === 'fitness' && styles.emojiButtonSelected]}
+                onPress={() => setDomain('fitness')}
               >
                 <Text style={styles.emojiButtonIcon}>💪</Text>
-                <Text style={styles.emojiButtonLabel}>Health</Text>
+                <Text style={styles.emojiButtonLabel}>Fitness</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
