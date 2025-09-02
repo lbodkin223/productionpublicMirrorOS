@@ -464,13 +464,13 @@ function MirrorOSApp() {
                       <View style={styles.analysisSection}>
                         <Text style={styles.analysisTitle}>🔢 Mathematical Analysis</Text>
                         <Text style={styles.analysisText}>
-                          Base Probability: {(result.math_breakdown.base_probability * 100).toFixed(1)}%
+                          Monte Carlo Projection: {result.math_breakdown.monte_carlo_projection \n                            ? `${(result.math_breakdown.monte_carlo_projection * 100).toFixed(1)}%` \n                            : 'Not available'}
                         </Text>
                         <Text style={styles.analysisText}>
-                          Final Score: {result.math_breakdown.logit_score?.toFixed(3)} logits
+                          RAG Baseline: {result.math_breakdown.rag_baseline \n                            ? `${(result.math_breakdown.rag_baseline * 100).toFixed(1)}%` \n                            : 'Not available'}
                         </Text>
                         <Text style={styles.analysisText}>
-                          Final Probability: {(result.math_breakdown.final_probability * 100).toFixed(1)}%
+                          Final Blended Result: {result.math_breakdown.blended_result \n                            ? `${(result.math_breakdown.blended_result * 100).toFixed(1)}%` \n                            : result.probability_percent || `${(result.probability * 100).toFixed(1)}%`}
                         </Text>
                         
                         {result.math_breakdown.positive_factors && result.math_breakdown.positive_factors.length > 0 && (
