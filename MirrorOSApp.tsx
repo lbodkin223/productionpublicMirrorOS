@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Switch,
+  Share,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
@@ -98,6 +99,8 @@ function MirrorOSApp() {
 
       const data = await response.json();
       console.log('📦 Raw response data:', JSON.stringify(data, null, 2));
+      console.log('🔍 Confidence interval check:', data.confidence_interval);
+      console.log('🔍 Probability comparison check:', data.probability_comparison);
       console.log('🎯 Response probability:', data.probability);
       console.log('🧮 Math breakdown:', data.math_breakdown);
       
@@ -107,14 +110,17 @@ function MirrorOSApp() {
           narrative: data.narrative || data.explanation || 'Prediction completed successfully.',
           chain_of_thought: data.chain_of_thought,
           math_breakdown: data.math_breakdown,
-          factors: data.factors,
-          risks: data.risks,
+          factors: data.factors || data.top_factors,
+          risks: data.risks || data.risk_factors,
           statistical_analysis: data.statistical_analysis,
           grounding_data: data.grounding_data,
           key_success_factors: data.key_success_factors,
           domain: data.domain || 'general',
           confidence_level: data.confidence_level || 'standard',
-          outcome_category: data.outcome_category
+          outcome_category: data.outcome_category,
+          confidence_interval: data.confidence_interval,
+          probability_comparison: data.probability_comparison,
+          si_factors_extracted: data.si_factors_extracted
         });
       } else {
         throw new Error(data.error || 'Prediction failed');
@@ -124,6 +130,46 @@ function MirrorOSApp() {
       Alert.alert('Error', 'Prediction failed. Please check your connection and try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateShareableOdds = async () => {
+    if (!result) return;
+    
+    try {
+      console.log('🎨 Generating shareable odds...');
+      const response = await fetch(`${API_BASE_URL}/shareable-odds`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+        },
+        body: JSON.stringify({
+          prediction_data: {
+            goal: goalText.trim(),
+            context: contextText.trim(),
+            user_name: 'MirrorOS User'
+          }
+        })
+      });
+
+      const data = await response.json();
+      console.log('📦 Shareable odds response:', data);
+      
+      if (response.ok && data.sharing_data) {
+        const shareText = data.sharing_data.sharing_text?.medium || 
+                         `🔮 My MirrorOS prediction: ${Math.round(result.probability * 100)}% success probability for my goal!`;
+        
+        await Share.share({
+          message: `${shareText}\n\n🚀 Predicted with MirrorOS - AI-powered goal achievement analysis`,
+          title: 'My MirrorOS Prediction'
+        });
+      } else {
+        Alert.alert('Share Error', 'Could not generate shareable content');
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      Alert.alert('Share Error', 'Could not share prediction');
     }
   };
 
@@ -297,6 +343,49 @@ function MirrorOSApp() {
                 Success Probability: {Math.round(result.probability * 100)}%
               </Text>
               
+              {/* Confidence Interval Display */}
+              {result.confidence_interval && Array.isArray(result.confidence_interval) && result.confidence_interval.length === 2 && (
+                <Text style={styles.confidenceText}>
+                  Range: {(result.confidence_interval[0] * 100).toFixed(1)}% - {(result.confidence_interval[1] * 100).toFixed(1)}%
+                </Text>
+              )}
+              
+              {/* Baseline Comparison Display */}
+              {result.probability_comparison && (
+                <View style={styles.comparisonSection}>
+                  <Text style={styles.comparisonText}>
+                    Your odds: {Math.round(result.probability * 100)}% | Average person: {Math.round(result.probability_comparison.baseline * 100)}%
+                  </Text>
+                  {result.probability_comparison.improvement_factor && (
+                    <Text style={styles.advantageText}>
+                      {result.probability_comparison.improvement_factor > 1 
+                        ? `${result.probability_comparison.improvement_factor.toFixed(1)}x better` 
+                        : `${(1/result.probability_comparison.improvement_factor).toFixed(1)}x harder`}
+                    </Text>
+                  )}
+                </View>
+              )}
+              
+              {/* SI Factors Breakdown Display */}
+              {result.si_factors_extracted && Object.keys(result.si_factors_extracted).length > 0 && (
+                <View style={styles.siFactorsSection}>
+                  <Text style={styles.siFactorsTitle}>🔬 Analysis Factors</Text>
+                  {Object.entries(result.si_factors_extracted).map(([key, value], idx) => (
+                    <View key={idx} style={styles.siFactorRow}>
+                      <Text style={styles.siFactorLabel}>
+                        {key.replace(/_/g, ' ').replace(/ratio/g, '').trim().toUpperCase()}:
+                      </Text>
+                      <Text style={styles.siFactorValue}>
+                        {typeof value === 'number' 
+                          ? (key.includes('ratio') ? `${Math.round(value * 100)}%` : value.toString())
+                          : value
+                        }
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              
               {/* Domain and Confidence Info - Fixed styling */}
               <View style={styles.metadataRow}>
                 <View style={styles.metadataItem}>
@@ -383,9 +472,15 @@ function MirrorOSApp() {
               </View>
             )}
             
-            <TouchableOpacity style={styles.clearButton} onPress={clearResult}>
-              <Text style={styles.clearButtonText}>🗑️ Clear</Text>
-            </TouchableOpacity>
+            <View style={styles.actionButtonsRow}>
+              <TouchableOpacity style={styles.shareButton} onPress={generateShareableOdds}>
+                <Text style={styles.shareButtonText}>📤 Share</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.clearButton} onPress={clearResult}>
+                <Text style={styles.clearButtonText}>🗑️ Clear</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -605,8 +700,35 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#007AFF',
-    marginBottom: 10,
+    marginBottom: 5,
     textAlign: 'center',
+  },
+  confidenceText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 10,
+    fontStyle: 'italic',
+  },
+  comparisonSection: {
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+  },
+  comparisonText: {
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  advantageText: {
+    fontSize: 12,
+    color: '#007AFF',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   resultText: {
     fontSize: 16,
@@ -637,13 +759,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     textTransform: 'capitalize',
-  },
-  clearButton: {
-    backgroundColor: '#f0f0f0',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
   },
   clearButtonText: {
     color: '#666',
@@ -760,6 +875,64 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#2E7D32',
     marginBottom: 2,
+  },
+  siFactorsSection: {
+    marginTop: 15,
+    padding: 12,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+  },
+  siFactorsTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 8,
+  },
+  siFactorRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  siFactorLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+    flex: 1,
+  },
+  siFactorValue: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  shareButton: {
+    flex: 1,
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  shareButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  clearButton: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
   },
 });
 
