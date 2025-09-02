@@ -114,13 +114,16 @@ function MirrorOSApp() {
           risks: data.risks || data.risk_factors,
           statistical_analysis: data.statistical_analysis,
           grounding_data: data.grounding_data,
+          grounding_analysis: data.grounding_analysis,
+          evidence_summary: data.evidence_summary,
           key_success_factors: data.key_success_factors,
           domain: data.domain || 'general',
           confidence_level: data.confidence_level || 'standard',
           outcome_category: data.outcome_category,
           confidence_interval: data.confidence_interval,
           probability_comparison: data.probability_comparison,
-          si_factors_extracted: data.si_factors_extracted
+          si_factors_extracted: data.si_factors_extracted,
+          success_timeline: data.chain_of_thought?.animation_sequence?.interactive_elements?.find(e => e.type === 'success_timeline')
         });
       } else {
         throw new Error(data.error || 'Prediction failed');
@@ -350,17 +353,23 @@ function MirrorOSApp() {
                 </Text>
               )}
               
-              {/* Baseline Comparison Display */}
-              {result.probability_comparison && (
+              {/* Enhanced Baseline Comparison with Grounding */}
+              {(result.probability_comparison || result.grounding_analysis) && (
                 <View style={styles.comparisonSection}>
+                  <Text style={styles.comparisonTitle}>📊 Evidence-Based Comparison</Text>
                   <Text style={styles.comparisonText}>
-                    Your odds: {Math.round(result.probability * 100)}% | Average person: {Math.round(result.probability_comparison.baseline * 100)}%
+                    Your odds: {Math.round(result.probability * 100)}% | Average person: {Math.round((result.probability_comparison?.baseline || result.grounding_analysis?.rag_grounded_baseline || 0.03) * 100)}%
                   </Text>
-                  {result.probability_comparison.improvement_factor && (
+                  {(result.probability_comparison?.improvement_factor || result.grounding_analysis) && (
                     <Text style={styles.advantageText}>
-                      {result.probability_comparison.improvement_factor > 1 
-                        ? `${result.probability_comparison.improvement_factor.toFixed(1)}x better` 
-                        : `${(1/result.probability_comparison.improvement_factor).toFixed(1)}x harder`}
+                      {(result.probability_comparison?.improvement_factor || result.grounding_analysis?.final_grounded_probability / result.grounding_analysis?.rag_grounded_baseline) > 1 
+                        ? `${((result.probability_comparison?.improvement_factor || result.grounding_analysis?.final_grounded_probability / result.grounding_analysis?.rag_grounded_baseline) || 1).toFixed(1)}x better` 
+                        : `${(1/(result.probability_comparison?.improvement_factor || result.grounding_analysis?.final_grounded_probability / result.grounding_analysis?.rag_grounded_baseline || 1)).toFixed(1)}x harder`}
+                    </Text>
+                  )}
+                  {result.grounding_analysis && (
+                    <Text style={styles.evidenceText}>
+                      Evidence confidence: {result.grounding_analysis.grounding_confidence} • {result.grounding_analysis.evidence_sources} sources
                     </Text>
                   )}
                 </View>
@@ -401,6 +410,26 @@ function MirrorOSApp() {
               </View>
               
               <Text style={styles.resultText}>{result.narrative}</Text>
+              
+              {/* Evidence Summary Display */}
+              {result.evidence_summary && result.evidence_summary.length > 0 && (
+                <View style={styles.evidenceSection}>
+                  <Text style={styles.evidenceSectionTitle}>🔍 Evidence Sources</Text>
+                  {result.evidence_summary.map((evidence, idx) => (
+                    <View key={idx} style={styles.evidenceItem}>
+                      <Text style={styles.evidenceSource}>
+                        📚 {evidence.source.replace(/_/g, ' ').toUpperCase()}
+                      </Text>
+                      <Text style={styles.evidenceDetails}>
+                        Historical rate: {(evidence.historical_success_rate * 100).toFixed(1)}% • Sample: {evidence.sample_size.toLocaleString()}
+                      </Text>
+                      <Text style={styles.evidenceRelevance}>
+                        Relevance: {(evidence.relevance * 100).toFixed(0)}%
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
               
               {result.key_success_factors && result.key_success_factors.length > 0 && (
                 <View style={styles.successFactorsSection}>
@@ -933,6 +962,56 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  comparisonTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  evidenceText: {
+    fontSize: 11,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  evidenceSection: {
+    marginTop: 15,
+    padding: 12,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+  },
+  evidenceSectionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 8,
+  },
+  evidenceItem: {
+    marginBottom: 8,
+    padding: 8,
+    backgroundColor: '#fff',
+    borderRadius: 6,
+  },
+  evidenceSource: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 2,
+  },
+  evidenceDetails: {
+    fontSize: 11,
+    color: '#666',
+    marginBottom: 2,
+  },
+  evidenceRelevance: {
+    fontSize: 10,
+    color: '#007AFF',
+    fontWeight: '600',
   },
 });
 
