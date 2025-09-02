@@ -92,7 +92,13 @@ npx expo start --prod
 }
 ```
 
+## Recent Updates (2025-09-02)
+- ✅ **LLM Extraction Fixed**: 3000 token limits (was 500) for long context support
+- ✅ **Type Safety**: Fixed 'int' object has no attribute 'lower' errors
+- ✅ **Realistic Predictions**: OpenAI job 1.0% (was 57% fallback)
+- ✅ **Factor Extraction**: Now properly extracts company competitiveness
+
 ## Known Issues & Solutions
-- **QR Code Visibility**: Run `npx expo start` manually to see interactive QR code display
-- **API Connection**: Verify production API health if predictions fail
-- **Authentication**: Demo token system bypasses complex auth for mobile testing
+- **QR Code Visibility**: Run `npx expo start --tunnel` for network accessibility
+- **Dating Domain**: Minor type error still being fixed
+- **Authentication**: Demo token system working with production API
