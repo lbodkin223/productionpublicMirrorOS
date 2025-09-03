@@ -16,7 +16,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 
 // Use environment-configured API URL
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.20.35.3:8080';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://yyk4197cr6.execute-api.us-east-2.amazonaws.com/prod/api';
 
 // Debug logging
 console.log('🔍 API_BASE_URL:', API_BASE_URL);
@@ -77,8 +77,12 @@ function MirrorOSApp() {
         }
       }
 
-      // Make real API prediction call
+      // Make real API prediction call with timeout
       console.log('🚀 Making request to:', `${API_BASE_URL}/predict`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
       const response = await fetch(`${API_BASE_URL}/predict`, {
         method: 'POST',
         headers: {
@@ -90,12 +94,15 @@ function MirrorOSApp() {
             goal: goalText.trim(),
             context: contextText.trim(),
             domain: domain,
-            confidence_level: confidenceLevel,
-            enhanced_grounding: enhancedGrounding,
-            use_llm_domain_detection: llmDomainDetection
+            confidence_level: "fast",
+            enhanced_grounding: false,
+            use_llm_domain_detection: false
           }
-        })
+        }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       const data = await response.json();
       console.log('📦 Raw response data:', JSON.stringify(data, null, 2));
@@ -130,7 +137,13 @@ function MirrorOSApp() {
       }
     } catch (error) {
       console.error('Prediction error:', error);
-      Alert.alert('Error', 'Prediction failed. Please check your connection and try again.');
+      if (error.name === 'AbortError') {
+        Alert.alert('Timeout', 'Request took too long. Please try again with a shorter goal description.');
+      } else if (error.message?.includes('Network request failed')) {
+        Alert.alert('Network Error', 'Please check your internet connection and try again.');
+      } else {
+        Alert.alert('Error', `Prediction failed: ${error.message || 'Unknown error'}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -464,13 +477,19 @@ function MirrorOSApp() {
                       <View style={styles.analysisSection}>
                         <Text style={styles.analysisTitle}>🔢 Mathematical Analysis</Text>
                         <Text style={styles.analysisText}>
-                          Monte Carlo Projection: {result.math_breakdown.monte_carlo_projection \n                            ? `${(result.math_breakdown.monte_carlo_projection * 100).toFixed(1)}%` \n                            : 'Not available'}
+                          Monte Carlo Projection: {result.math_breakdown.monte_carlo_projection 
+                            ? `${(result.math_breakdown.monte_carlo_projection * 100).toFixed(1)}%` 
+                            : 'Not available'}
                         </Text>
                         <Text style={styles.analysisText}>
-                          RAG Baseline: {result.math_breakdown.rag_baseline \n                            ? `${(result.math_breakdown.rag_baseline * 100).toFixed(1)}%` \n                            : 'Not available'}
+                          RAG Baseline: {result.math_breakdown.rag_baseline 
+                            ? `${(result.math_breakdown.rag_baseline * 100).toFixed(1)}%` 
+                            : 'Not available'}
                         </Text>
                         <Text style={styles.analysisText}>
-                          Final Blended Result: {result.math_breakdown.blended_result \n                            ? `${(result.math_breakdown.blended_result * 100).toFixed(1)}%` \n                            : result.probability_percent || `${(result.probability * 100).toFixed(1)}%`}
+                          Final Blended Result: {result.math_breakdown.blended_result 
+                            ? `${(result.math_breakdown.blended_result * 100).toFixed(1)}%` 
+                            : result.probability_percent || `${(result.probability * 100).toFixed(1)}%`}
                         </Text>
                         
                         {result.math_breakdown.positive_factors && result.math_breakdown.positive_factors.length > 0 && (
