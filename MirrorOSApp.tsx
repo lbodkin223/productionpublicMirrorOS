@@ -33,6 +33,7 @@ function MirrorOSApp() {
   const [result, setResult] = useState(null);
   const [authToken, setAuthToken] = useState(null);
   const [showChainOfThought, setShowChainOfThought] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Set demo authentication token on app load (simplified auth)
   useEffect(() => {
@@ -59,8 +60,9 @@ function MirrorOSApp() {
     setLoading(true);
     try {
       // First get demo token if we don't have one
-      if (!authToken) {
+      if (!authToken && retryCount < 1) {
         try {
+          setRetryCount(retryCount + 1);
           const authResponse = await fetch(`${API_BASE_URL}/auth/demo-login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -74,6 +76,7 @@ function MirrorOSApp() {
           }
         } catch (authError) {
           console.error('Auth error:', authError);
+          setAuthToken('demo-token-mobile-2025'); // Use fallback token
         }
       }
 
