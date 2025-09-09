@@ -5,7 +5,7 @@ export default {
     name: "MirrorOS",
     slug: "mirroros", 
     owner: "lbodkin",
-    version: "1.0.0",
+    version: "4.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "automatic",
@@ -20,7 +20,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.mirroros.app",
-      buildNumber: "1",
+      buildNumber: "10",
       infoPlist: {
         NSCameraUsageDescription: "This app does not use the camera.",
         NSMicrophoneUsageDescription: "This app does not use the microphone."
@@ -42,10 +42,8 @@ export default {
       eas: {
         projectId: "630516d2-60a4-42ec-9511-de0a7fe01d70"
       },
-      // Environment-specific configuration
-      apiUrl: IS_DEVELOPMENT 
-        ? process.env.EXPO_PUBLIC_API_URL || "http://localhost:8080/api"
-        : process.env.EXPO_PUBLIC_API_URL || "https://yyk4197cr6.execute-api.us-east-2.amazonaws.com/prod/api",
+      // Always use production API for testing
+      apiUrl: process.env.EXPO_PUBLIC_API_URL || "https://yyk4197cr6.execute-api.us-east-2.amazonaws.com/prod/api",
       environment: process.env.EXPO_PUBLIC_ENVIRONMENT || (IS_DEVELOPMENT ? "development" : "production"),
       demoMode: process.env.EXPO_PUBLIC_DEMO_MODE === "true" || IS_DEVELOPMENT,
       debugMode: process.env.EXPO_PUBLIC_DEBUG_MODE === "true" || IS_DEVELOPMENT

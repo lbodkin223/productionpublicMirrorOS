@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import Constants from 'expo-constants';
 import { Picker } from '@react-native-picker/picker';
-import OrganizedSmartMetricInput from './OrganizedSmartMetricInput';
 
 const { width } = Dimensions.get('window');
 
@@ -58,7 +57,6 @@ interface PredictionResult {
 const MirrorOSApp: React.FC = () => {
   const [goal, setGoal] = useState('');
   const [context, setContext] = useState('');
-  const [structuredMetrics, setStructuredMetrics] = useState<Record<string, any>>({});
   const [selectedDomain, setSelectedDomain] = useState('auto');
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -104,23 +102,10 @@ const MirrorOSApp: React.FC = () => {
     }
   }, [currentView]);
 
-  const handleMetricsChange = (contextString: string) => {
-    setContext(contextString);
-    
-    // Count metrics for display
-    const metricCount = contextString.split(',').filter(part => part.trim().includes(':')).length;
-    setStructuredMetrics({ count: metricCount, raw: contextString });
-  };
-
   const handlePredict = async () => {
     if (!goal.trim()) {
       Alert.alert('Error', 'Please enter your goal');
       return;
-    }
-    
-    if (!structuredMetrics.count || structuredMetrics.count === 0) {
-      Alert.alert('Info', 'Add some metrics about your current situation for better predictions!');
-      // Allow proceeding without metrics for basic analysis
     }
 
     setLoading(true);
@@ -171,9 +156,9 @@ const MirrorOSApp: React.FC = () => {
         <Text style={styles.title}>MirrorOS</Text>
         <Text style={styles.subtitle}>Research-Grounded Future Predictions</Text>
         <View style={styles.featureBadges}>
-          <Text style={styles.badge}>🧠 Smart Input</Text>
-          <Text style={styles.badge}>📊 100+ Patterns</Text>
-          <Text style={styles.badge}>🎯 Auto-Detection</Text>
+          <Text style={styles.badge}>🔬 60+ Metrics</Text>
+          <Text style={styles.badge}>📊 RAG Grounded</Text>
+          <Text style={styles.badge}>🎲 10K Simulations</Text>
         </View>
       </View>
 
@@ -190,10 +175,16 @@ const MirrorOSApp: React.FC = () => {
         />
       </View>
 
-      {/* Organized Smart Metric Input */}
+      {/* Context Input */}
       <View style={styles.inputSection}>
-        <OrganizedSmartMetricInput
-          onMetricsChange={handleMetricsChange}
+        <Text style={styles.inputLabel}>📋 Your current situation</Text>
+        <TextInput
+          style={styles.textInput}
+          value={context}
+          onChangeText={setContext}
+          placeholder="e.g., CS degree, 3.8 GPA, 2 years experience at startups"
+          placeholderTextColor="#999"
+          multiline
         />
       </View>
 
@@ -239,20 +230,11 @@ const MirrorOSApp: React.FC = () => {
 
       {/* Predict Button */}
       <TouchableOpacity 
-        style={[
-          styles.predictButton, 
-          (!goal.trim()) && styles.predictButtonDisabled,
-          (structuredMetrics.count > 0) && styles.predictButtonEnhanced
-        ]}
+        style={[styles.predictButton, (!goal.trim()) && styles.predictButtonDisabled]}
         onPress={handlePredict}
         disabled={!goal.trim()}
       >
-        <Text style={styles.predictButtonText}>
-          {structuredMetrics.count > 0 
-            ? `🚀 Analyze with ${structuredMetrics.count} Metrics`
-            : '🔮 Analyze Future Probability'
-          }
-        </Text>
+        <Text style={styles.predictButtonText}>🔮 Analyze Future Probability</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -604,10 +586,6 @@ const styles = StyleSheet.create({
   predictButtonDisabled: {
     backgroundColor: '#9ca3af',
     shadowOpacity: 0,
-  },
-  predictButtonEnhanced: {
-    backgroundColor: '#059669',
-    shadowColor: '#059669',
   },
   predictButtonText: {
     color: '#ffffff',
