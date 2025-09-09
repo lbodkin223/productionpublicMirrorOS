@@ -128,6 +128,13 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
   const [selectedMetric, setSelectedMetric] = useState<string>('');
   const [currentValue, setCurrentValue] = useState('');
   
+  // Demographic selections
+  const [selectedGender, setSelectedGender] = useState<string>('');
+  
+  // Timeline selections
+  const [timelineValue, setTimelineValue] = useState<string>('');
+  const [timelineUnit, setTimelineUnit] = useState<string>('months');
+  
   // Qualitative metric form state
   const [showQualitativeForm, setShowQualitativeForm] = useState(false);
   const [qualitativeTag, setQualitativeTag] = useState('');
@@ -235,9 +242,9 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
     ],
     
     timeline: [
-      { key: 'timeline_months', label: 'Goal Timeline', unit: 'months', placeholder: '12' },
-      { key: 'timeline_weeks', label: 'Goal Timeline', unit: 'weeks', placeholder: '24' },
-      { key: 'timeline_days', label: 'Goal Timeline', unit: 'days', placeholder: '90' },
+      { key: 'timeline_months', label: 'Prediction Timeline', unit: 'months', placeholder: '12' },
+      { key: 'timeline_weeks', label: 'Prediction Timeline', unit: 'weeks', placeholder: '24' },
+      { key: 'timeline_days', label: 'Prediction Timeline', unit: 'days', placeholder: '90' },
       { key: 'milestone_frequency_weeks', label: 'Milestone Check-in', unit: 'weeks', placeholder: '4' },
     ],
   };
@@ -339,9 +346,106 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
     updateParentContext(metrics, updatedQualitativeMetrics);
   };
 
+  const updateTimelineMetric = (value: string, unit: string) => {
+    if (!value.trim()) return;
+    
+    const timelineMetric: Metric = {
+      id: 'timeline_selection',
+      domain: 'timeline',
+      key: `timeline_${unit}`,
+      label: 'Prediction Timeline',
+      value: value.trim(),
+      unit: unit,
+      type: 'quantitative'
+    };
+    
+    // Remove any existing timeline metric and add new one
+    const updatedMetrics = [...metrics.filter(m => !m.key.startsWith('timeline_')), timelineMetric];
+    setMetrics(updatedMetrics);
+    updateParentContext(updatedMetrics, qualitativeMetrics);
+    
+    // Clear the input
+    setTimelineValue('');
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>📊 Add Your Metrics</Text>
+      
+      {/* Gender Selection */}
+      <CustomDropdown
+        label="👤 Gender (Optional)"
+        value={selectedGender}
+        placeholder="Select gender for better predictions..."
+        options={[
+          { label: 'Male', value: 'male' },
+          { label: 'Female', value: 'female' },
+          { label: 'Other', value: 'other' },
+          { label: 'Prefer not to say', value: 'not_specified' },
+        ]}
+        onSelect={(value) => {
+          setSelectedGender(value);
+          // Add gender to context immediately when selected
+          const genderMetric: Metric = {
+            id: 'gender_selection',
+            domain: 'demographic',
+            key: 'gender',
+            label: 'Gender',
+            value: value,
+            unit: 'category',
+            type: 'quantitative'
+          };
+          
+          // Remove any existing gender metric and add new one
+          const updatedMetrics = [...metrics.filter(m => m.key !== 'gender'), genderMetric];
+          setMetrics(updatedMetrics);
+          updateParentContext(updatedMetrics, qualitativeMetrics);
+        }}
+      />
+      
+      {/* Timeline Selection - Prominent */}
+      <View style={styles.timelineSection}>
+        <Text style={styles.timelineSectionTitle}>⏰ Prediction Timeline</Text>
+        <Text style={styles.timelineSectionDescription}>
+          When do you want to achieve this? Longer timelines generally improve success probability.
+        </Text>
+        
+        <View style={styles.timelineInputRow}>
+          <TextInput
+            style={styles.timelineValueInput}
+            placeholder="Enter time..."
+            value={timelineValue}
+            onChangeText={setTimelineValue}
+            keyboardType="numeric"
+          />
+          
+          <CustomDropdown
+            label=""
+            value={timelineUnit}
+            placeholder="Unit"
+            options={[
+              { label: 'Days', value: 'days' },
+              { label: 'Weeks', value: 'weeks' },
+              { label: 'Months', value: 'months' },
+              { label: 'Years', value: 'years' },
+            ]}
+            onSelect={(unit) => {
+              setTimelineUnit(unit);
+              if (timelineValue.trim()) {
+                updateTimelineMetric(timelineValue, unit);
+              }
+            }}
+          />
+          
+          <TouchableOpacity
+            style={[styles.addTimelineButton, !timelineValue.trim() && styles.addTimelineButtonDisabled]}
+            onPress={() => updateTimelineMetric(timelineValue, timelineUnit)}
+            disabled={!timelineValue.trim()}
+          >
+            <Text style={styles.addTimelineButtonText}>Set</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
       
       {/* Domain Selection */}
       <CustomDropdown
@@ -514,7 +618,7 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
                     Weight in Equation: {(qualitativeWeight * 100).toFixed(0)}%
                   </Text>
                   <Text style={styles.sliderDescription}>
-                    How important is this factor for your specific goal?
+                    How important is this factor for your specific prediction?
                   </Text>
                   <View style={styles.sliderRow}>
                     <Text style={styles.sliderMinLabel}>Minor (0%)</Text>
@@ -579,6 +683,60 @@ const styles = StyleSheet.create({
     color: '#1a202c',
     marginBottom: 24,
     textAlign: 'center',
+  },
+  
+  // Timeline Section Styles
+  timelineSection: {
+    backgroundColor: '#fff7ed',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+  },
+  timelineSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#92400e',
+    marginBottom: 8,
+  },
+  timelineSectionDescription: {
+    fontSize: 14,
+    color: '#78716c',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  timelineInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  timelineValueInput: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#374151',
+  },
+  addTimelineButton: {
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  addTimelineButtonDisabled: {
+    backgroundColor: '#d1d5db',
+  },
+  addTimelineButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
   
   // Input containers

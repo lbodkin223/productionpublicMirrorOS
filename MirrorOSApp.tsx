@@ -80,7 +80,7 @@ const MirrorOSApp: React.FC = () => {
   ];
 
   const analysisSteps = [
-    { icon: '🎯', title: 'Goal Analysis', subtitle: 'AI-powered domain detection' },
+    { icon: '🎯', title: 'Question Analysis', subtitle: 'AI-powered domain detection' },
     { icon: '🔬', title: 'Factor Extraction', subtitle: '60+ metrics analysis' },
     { icon: '📊', title: 'RAG Research', subtitle: 'Evidence-based baselines' },
     { icon: '🎲', title: 'Monte Carlo', subtitle: '10,000 simulations' },
@@ -114,7 +114,7 @@ const MirrorOSApp: React.FC = () => {
 
   const handlePredict = async () => {
     if (!goal.trim()) {
-      Alert.alert('Error', 'Please enter your goal');
+      Alert.alert('Error', 'Please enter what you want to predict');
       return;
     }
     
@@ -179,12 +179,12 @@ const MirrorOSApp: React.FC = () => {
 
       {/* Goal Input */}
       <View style={styles.inputSection}>
-        <Text style={styles.inputLabel}>🎯 What's your goal?</Text>
+        <Text style={styles.inputLabel}>🎯 What do you want to predict?</Text>
         <TextInput
           style={styles.textInput}
           value={goal}
           onChangeText={setGoal}
-          placeholder="e.g., Get a job at OpenAI, Lose 30 pounds, Start a $1M business"
+          placeholder="e.g., Get a job at OpenAI, Will I get COVID this year, Lose 30 pounds, Start a $1M business"
           placeholderTextColor="#999"
           multiline
         />
@@ -303,6 +303,12 @@ const MirrorOSApp: React.FC = () => {
 
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* Original Question Context */}
+        <View style={styles.questionHeader}>
+          <Text style={styles.questionLabel}>🎯 Your Question</Text>
+          <Text style={styles.questionText}>{goal}</Text>
+        </View>
+
         {/* Main Result */}
         <View style={styles.resultHeader}>
           <Text style={styles.resultProbability}>{result.probability_percent}</Text>
@@ -697,6 +703,26 @@ const styles = StyleSheet.create({
   },
 
   // Results View
+  questionHeader: {
+    backgroundColor: '#f8fafc',
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3b82f6',
+  },
+  questionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+    marginBottom: 8,
+  },
+  questionText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#1e293b',
+    lineHeight: 24,
+  },
   resultHeader: {
     alignItems: 'center',
     backgroundColor: '#ffffff',
