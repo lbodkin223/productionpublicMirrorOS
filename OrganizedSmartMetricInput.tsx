@@ -8,8 +8,8 @@ import {
   StyleSheet,
   Modal,
   FlatList,
-  Slider,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 
 interface MetricDefinition {
   key: string;
@@ -262,30 +262,40 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
     setCurrentValue('');
     
     // Update parent with clean context string
-    updateParentContext(updatedMetrics);
+    updateParentContext(updatedMetrics, qualitativeMetrics);
   };
 
   const removeMetric = (id: string) => {
     const updatedMetrics = metrics.filter(m => m.id !== id);
     setMetrics(updatedMetrics);
-    updateParentContext(updatedMetrics);
+    updateParentContext(updatedMetrics, qualitativeMetrics);
   };
 
   const updateParentContext = (metricsList: Metric[], qualitativeList?: QualitativeMetric[]) => {
-    // Create clean context string: "age: 23 years, weight_current_lbs: 140 lbs, motivation_ratio: 0.8, motivation_weight: 0.6"
-    const quantitativeContext = metricsList
-      .map(m => `${m.key}: ${m.value} ${m.unit}`)
-      .join(', ');
-    
-    const qualitativeContext = (qualitativeList || qualitativeMetrics)
-      .map(q => `${q.tag}_ratio: ${q.confidence.toFixed(2)}, ${q.tag}_weight: ${q.weight.toFixed(2)}`)
-      .join(', ');
-    
-    const fullContext = [quantitativeContext, qualitativeContext]
-      .filter(s => s.length > 0)
-      .join(', ');
-    
-    onMetricsChange(fullContext);
+    try {
+      // Create clean context string: "age: 23 years, weight_current_lbs: 140 lbs, motivation_ratio: 0.8, motivation_weight: 0.6"
+      const quantitativeContext = metricsList
+        .map(m => `${m.key}: ${m.value} ${m.unit}`)
+        .join(', ');
+      
+      const qualitativeContext = (qualitativeList || qualitativeMetrics)
+        .filter(q => q && q.tag && typeof q.confidence === 'number' && typeof q.weight === 'number')
+        .map(q => `${q.tag}_ratio: ${q.confidence.toFixed(2)}, ${q.tag}_weight: ${q.weight.toFixed(2)}`)
+        .join(', ');
+      
+      const fullContext = [quantitativeContext, qualitativeContext]
+        .filter(s => s && s.length > 0)
+        .join(', ');
+      
+      onMetricsChange(fullContext);
+    } catch (error) {
+      console.error('Error updating parent context:', error);
+      // Fallback to just quantitative metrics
+      const fallbackContext = metricsList
+        .map(m => `${m.key}: ${m.value} ${m.unit}`)
+        .join(', ');
+      onMetricsChange(fallbackContext);
+    }
   };
 
   const getCurrentMetricDef = () => {
@@ -294,24 +304,33 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
   };
 
   const addQualitativeMetric = () => {
-    if (!qualitativeTag.trim()) return;
+    try {
+      if (!qualitativeTag.trim()) return;
 
-    const newQualitativeMetric: QualitativeMetric = {
-      id: Date.now().toString(),
-      tag: qualitativeTag.trim().toLowerCase().replace(/\s+/g, '_'),
-      confidence: qualitativeConfidence,
-      weight: qualitativeWeight,
-    };
+      // Sanitize tag name
+      const sanitizedTag = qualitativeTag.trim().toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_');
+      if (!sanitizedTag) return;
 
-    const updatedQualitativeMetrics = [...qualitativeMetrics, newQualitativeMetric];
-    setQualitativeMetrics(updatedQualitativeMetrics);
-    setQualitativeTag('');
-    setQualitativeConfidence(0.5);
-    setQualitativeWeight(0.5);
-    setShowQualitativeForm(false);
-    
-    // Update parent with new qualitative metrics
-    updateParentContext(metrics, updatedQualitativeMetrics);
+      const newQualitativeMetric: QualitativeMetric = {
+        id: Date.now().toString(),
+        tag: sanitizedTag,
+        confidence: qualitativeConfidence,
+        weight: qualitativeWeight,
+      };
+
+      const updatedQualitativeMetrics = [...qualitativeMetrics, newQualitativeMetric];
+      setQualitativeMetrics(updatedQualitativeMetrics);
+      setQualitativeTag('');
+      setQualitativeConfidence(0.5);
+      setQualitativeWeight(0.5);
+      setShowQualitativeForm(false);
+      
+      // Update parent with new qualitative metrics
+      updateParentContext(metrics, updatedQualitativeMetrics);
+    } catch (error) {
+      console.error('Error adding qualitative metric:', error);
+      setShowQualitativeForm(false);
+    }
   };
 
   const removeQualitativeMetric = (id: string) => {
@@ -484,7 +503,7 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
                       onValueChange={setQualitativeConfidence}
                       minimumTrackTintColor="#3b82f6"
                       maximumTrackTintColor="#e5e7eb"
-                      thumbStyle={{ backgroundColor: '#3b82f6' }}
+                      thumbTintColor="#3b82f6"
                     />
                     <Text style={styles.sliderMaxLabel}>Helps (100%)</Text>
                   </View>
@@ -507,7 +526,7 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
                       onValueChange={setQualitativeWeight}
                       minimumTrackTintColor="#10b981"
                       maximumTrackTintColor="#e5e7eb"
-                      thumbStyle={{ backgroundColor: '#10b981' }}
+                      thumbTintColor="#10b981"
                     />
                     <Text style={styles.sliderMaxLabel}>Critical (100%)</Text>
                   </View>
