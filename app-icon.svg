@@ -1,0 +1,70 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Bold gradient background - high contrast for visibility -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0D47A1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1565C0;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Crystal ball gradient - more pronounced -->
+    <radialGradient id="ballGradient" cx="40%" cy="30%">
+      <stop offset="0%" style="stop-color:#E3F2FD;stop-opacity:0.95" />
+      <stop offset="70%" style="stop-color:#90CAF9;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#42A5F5;stop-opacity:0.6" />
+    </radialGradient>
+    
+    <!-- Glow for percentage -->
+    <filter id="textGlow">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Drop shadow for depth -->
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- Clean rounded background -->
+  <rect x="0" y="0" width="1024" height="1024" rx="200" ry="200" fill="url(#bgGradient)"/>
+  
+  <!-- Main crystal ball - much larger, centered -->
+  <circle cx="512" cy="460" r="280" fill="url(#ballGradient)" 
+          stroke="#FFFFFF" stroke-width="12" 
+          filter="url(#shadow)" opacity="0.95"/>
+  
+  <!-- Prominent highlight for glass effect -->
+  <ellipse cx="420" cy="360" rx="90" ry="140" fill="#FFFFFF" opacity="0.4"/>
+  
+  <!-- Bold percentage - the hero element -->
+  <text x="512" y="480" text-anchor="middle" dominant-baseline="middle" 
+        font-family="SF Pro Display, -apple-system, BlinkMacSystemFont, sans-serif" 
+        font-size="160" font-weight="800" 
+        fill="#00E676" filter="url(#textGlow)">67%</text>
+  
+  <!-- Single, bold probability wave for movement -->
+  <path d="M 120 650 Q 512 550 904 650" 
+        stroke="#00E676" stroke-width="20" fill="none" 
+        opacity="0.7" stroke-linecap="round">
+    <animate attributeName="opacity" values="0.7;0.4;0.7" dur="3s" repeatCount="indefinite"/>
+  </path>
+  
+  <!-- Three key data points - positioned for impact -->
+  <circle cx="280" cy="280" r="14" fill="#FFC107" opacity="0.9">
+    <animate attributeName="r" values="14;18;14" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="744" cy="320" r="12" fill="#FF5722" opacity="0.9">
+    <animate attributeName="r" values="12;16;12" dur="2.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="320" cy="680" r="10" fill="#2196F3" opacity="0.9">
+    <animate attributeName="r" values="10;14;10" dur="1.8s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Subtle AI processing indicator at bottom -->
+  <circle cx="512" cy="850" r="8" fill="#00E676" opacity="0.6">
+    <animate attributeName="fill" values="#00E676;#4CAF50;#00E676" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+</svg>

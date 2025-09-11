@@ -39,6 +39,13 @@ interface QualitativeMetric {
   weight: number; // 0-1 (importance to overall equation)
 }
 
+interface CategoricalMetric {
+  id: string;
+  type: string;
+  value: string;
+  label: string;
+}
+
 interface OrganizedSmartMetricInputProps {
   onMetricsChange: (contextString: string) => void;
 }
@@ -124,12 +131,10 @@ const CustomDropdown: React.FC<DropdownProps> = ({ label, value, placeholder, op
 const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ onMetricsChange }) => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [qualitativeMetrics, setQualitativeMetrics] = useState<QualitativeMetric[]>([]);
+  const [categoricalMetrics, setCategoricalMetrics] = useState<CategoricalMetric[]>([]);
   const [selectedDomain, setSelectedDomain] = useState<string>('');
   const [selectedMetric, setSelectedMetric] = useState<string>('');
   const [currentValue, setCurrentValue] = useState('');
-  
-  // Demographic selections
-  const [selectedGender, setSelectedGender] = useState<string>('');
   
   // Timeline selections
   const [timelineValue, setTimelineValue] = useState<string>('');
@@ -269,16 +274,16 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
     setCurrentValue('');
     
     // Update parent with clean context string
-    updateParentContext(updatedMetrics, qualitativeMetrics);
+    updateParentContext(updatedMetrics, qualitativeMetrics, categoricalMetrics);
   };
 
   const removeMetric = (id: string) => {
     const updatedMetrics = metrics.filter(m => m.id !== id);
     setMetrics(updatedMetrics);
-    updateParentContext(updatedMetrics, qualitativeMetrics);
+    updateParentContext(updatedMetrics, qualitativeMetrics, categoricalMetrics);
   };
 
-  const updateParentContext = (metricsList: Metric[], qualitativeList?: QualitativeMetric[]) => {
+  const updateParentContext = (metricsList: Metric[], qualitativeList?: QualitativeMetric[], categoricalList?: CategoricalMetric[]) => {
     try {
       // Create clean context string: "age: 23 years, weight_current_lbs: 140 lbs, motivation_ratio: 0.8, motivation_weight: 0.6"
       const quantitativeContext = metricsList
@@ -289,8 +294,13 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
         .filter(q => q && q.tag && typeof q.confidence === 'number' && typeof q.weight === 'number')
         .map(q => `${q.tag}_ratio: ${q.confidence.toFixed(2)}, ${q.tag}_weight: ${q.weight.toFixed(2)}`)
         .join(', ');
+        
+      const categoricalContext = (categoricalList || categoricalMetrics)
+        .filter(c => c && c.type && c.value)
+        .map(c => `${c.type}: ${c.value}`)
+        .join(', ');
       
-      const fullContext = [quantitativeContext, qualitativeContext]
+      const fullContext = [quantitativeContext, qualitativeContext, categoricalContext]
         .filter(s => s && s.length > 0)
         .join(', ');
       
@@ -333,7 +343,7 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
       setShowQualitativeForm(false);
       
       // Update parent with new qualitative metrics
-      updateParentContext(metrics, updatedQualitativeMetrics);
+      updateParentContext(metrics, updatedQualitativeMetrics, categoricalMetrics);
     } catch (error) {
       console.error('Error adding qualitative metric:', error);
       setShowQualitativeForm(false);
@@ -343,7 +353,7 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
   const removeQualitativeMetric = (id: string) => {
     const updatedQualitativeMetrics = qualitativeMetrics.filter(q => q.id !== id);
     setQualitativeMetrics(updatedQualitativeMetrics);
-    updateParentContext(metrics, updatedQualitativeMetrics);
+    updateParentContext(metrics, updatedQualitativeMetrics, categoricalMetrics);
   };
 
   const updateTimelineMetric = (value: string, unit: string) => {
@@ -362,7 +372,7 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
     // Remove any existing timeline metric and add new one
     const updatedMetrics = [...metrics.filter(m => !m.key.startsWith('timeline_')), timelineMetric];
     setMetrics(updatedMetrics);
-    updateParentContext(updatedMetrics, qualitativeMetrics);
+    updateParentContext(updatedMetrics, qualitativeMetrics, categoricalMetrics);
     
     // Clear the input
     setTimelineValue('');
@@ -372,36 +382,125 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
     <View style={styles.container}>
       <Text style={styles.title}>📊 Add Your Metrics</Text>
       
-      {/* Gender Selection */}
-      <CustomDropdown
-        label="👤 Gender (Optional)"
-        value={selectedGender}
-        placeholder="Select gender for better predictions..."
-        options={[
-          { label: 'Male', value: 'male' },
-          { label: 'Female', value: 'female' },
-          { label: 'Other', value: 'other' },
-          { label: 'Prefer not to say', value: 'not_specified' },
-        ]}
-        onSelect={(value) => {
-          setSelectedGender(value);
-          // Add gender to context immediately when selected
-          const genderMetric: Metric = {
-            id: 'gender_selection',
-            domain: 'demographic',
-            key: 'gender',
-            label: 'Gender',
-            value: value,
-            unit: 'category',
-            type: 'quantitative'
-          };
-          
-          // Remove any existing gender metric and add new one
-          const updatedMetrics = [...metrics.filter(m => m.key !== 'gender'), genderMetric];
-          setMetrics(updatedMetrics);
-          updateParentContext(updatedMetrics, qualitativeMetrics);
-        }}
-      />
+      {/* Categorical/Dropdown Metrics Section */}
+      <View style={styles.categoricalSection}>
+        <Text style={styles.categoricalSectionTitle}>📋 Categorical Factors</Text>
+        <Text style={styles.categoricalSectionDescription}>
+          Select specific categories that can affect your prediction (gender, education, relationship status, etc.)
+        </Text>
+        
+        {/* Gender Selection */}
+        <CustomDropdown
+          label="👤 Gender (Optional)"
+          value={categoricalMetrics.find(c => c.type === 'gender')?.value || ''}
+          placeholder="Select gender for demographic context..."
+          options={[
+            { label: 'Male', value: 'male' },
+            { label: 'Female', value: 'female' },
+            { label: 'Other', value: 'other' },
+            { label: 'Prefer not to say', value: 'not_specified' },
+          ]}
+          onSelect={(value) => {
+            const updatedCategoricals = categoricalMetrics.filter(c => c.type !== 'gender');
+            if (value) {
+              updatedCategoricals.push({
+                id: 'categorical_gender',
+                type: 'gender',
+                value: value,
+                label: 'Gender'
+              });
+            }
+            setCategoricalMetrics(updatedCategoricals);
+            updateParentContext(metrics, qualitativeMetrics, updatedCategoricals);
+          }}
+        />
+        
+        {/* School Graduated From */}
+        <CustomDropdown
+          label="🎓 School/University (Optional)"
+          value={categoricalMetrics.find(c => c.type === 'school_tier')?.value || ''}
+          placeholder="Select your school tier for context..."
+          options={[
+            { label: 'Ivy League (Harvard, Yale, etc.)', value: 'ivy_league' },
+            { label: 'Top 20 University', value: 'top_20' },
+            { label: 'Top 50 University', value: 'top_50' },
+            { label: 'State University', value: 'state_university' },
+            { label: 'Community College', value: 'community_college' },
+            { label: 'Trade School', value: 'trade_school' },
+            { label: 'International University', value: 'international' },
+            { label: 'Online University', value: 'online' },
+          ]}
+          onSelect={(value) => {
+            const updatedCategoricals = categoricalMetrics.filter(c => c.type !== 'school_tier');
+            if (value) {
+              updatedCategoricals.push({
+                id: 'categorical_school',
+                type: 'school_tier',
+                value: value,
+                label: 'School Tier'
+              });
+            }
+            setCategoricalMetrics(updatedCategoricals);
+            updateParentContext(metrics, qualitativeMetrics, updatedCategoricals);
+          }}
+        />
+        
+        {/* Education Level Selection */}
+        <CustomDropdown
+          label="🎓 Education Level (Optional)"
+          value={categoricalMetrics.find(c => c.type === 'education_level')?.value || ''}
+          placeholder="Select your education level..."
+          options={[
+            { label: 'High School', value: 'high_school' },
+            { label: 'Some College', value: 'some_college' },
+            { label: "Bachelor's Degree", value: 'bachelors' },
+            { label: "Master's Degree", value: 'masters' },
+            { label: 'PhD/Doctorate', value: 'phd' },
+            { label: 'Professional/Trade', value: 'professional' },
+          ]}
+          onSelect={(value) => {
+            const updatedCategoricals = categoricalMetrics.filter(c => c.type !== 'education_level');
+            if (value) {
+              updatedCategoricals.push({
+                id: 'categorical_education',
+                type: 'education_level',
+                value: value,
+                label: 'Education Level'
+              });
+            }
+            setCategoricalMetrics(updatedCategoricals);
+            updateParentContext(metrics, qualitativeMetrics, updatedCategoricals);
+          }}
+        />
+        
+        {/* Relationship Status Selection */}
+        <CustomDropdown
+          label="💑 Relationship Status (Optional)"
+          value={categoricalMetrics.find(c => c.type === 'relationship_status')?.value || ''}
+          placeholder="Select your relationship status..."
+          options={[
+            { label: 'Single', value: 'single' },
+            { label: 'Dating', value: 'dating' },
+            { label: 'In Relationship', value: 'relationship' },
+            { label: 'Engaged', value: 'engaged' },
+            { label: 'Married', value: 'married' },
+            { label: 'Divorced', value: 'divorced' },
+          ]}
+          onSelect={(value) => {
+            const updatedCategoricals = categoricalMetrics.filter(c => c.type !== 'relationship_status');
+            if (value) {
+              updatedCategoricals.push({
+                id: 'categorical_relationship',
+                type: 'relationship_status',
+                value: value,
+                label: 'Relationship Status'
+              });
+            }
+            setCategoricalMetrics(updatedCategoricals);
+            updateParentContext(metrics, qualitativeMetrics, updatedCategoricals);
+          }}
+        />
+      </View>
       
       {/* Timeline Selection - Prominent */}
       <View style={styles.timelineSection}>
@@ -527,6 +626,32 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
           ))}
         </View>
       )}
+      
+      {/* Current Categorical Metrics Display */}
+      {categoricalMetrics.length > 0 && (
+        <View style={styles.metricsContainer}>
+          <Text style={styles.metricsTitle}>📋 Your Categories ({categoricalMetrics.length})</Text>
+          {categoricalMetrics.map((catMetric) => (
+            <View key={catMetric.id} style={styles.metricRow}>
+              <View style={styles.metricInfo}>
+                <Text style={styles.metricDomain}>Categorical</Text>
+                <Text style={styles.metricLabel}>{catMetric.label}</Text>
+                <Text style={styles.metricValue}>{catMetric.value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.removeButton}
+                onPress={() => {
+                  const updatedCategoricals = categoricalMetrics.filter(c => c.id !== catMetric.id);
+                  setCategoricalMetrics(updatedCategoricals);
+                  updateParentContext(metrics, qualitativeMetrics, updatedCategoricals);
+                }}
+              >
+                <Text style={styles.removeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Qualitative Metrics Section */}
       <View style={styles.qualitativeContainer}>
@@ -590,49 +715,80 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
                   autoCapitalize="none"
                 />
 
+                {/* Improved Effect Direction Selector */}
                 <View style={styles.sliderContainer}>
-                  <Text style={styles.sliderLabel}>
-                    Effect on Probability: {(qualitativeConfidence * 100).toFixed(0)}%
-                  </Text>
+                  <Text style={styles.sliderLabel}>📊 How does this factor affect your success?</Text>
                   <Text style={styles.sliderDescription}>
-                    How much does this factor help/hurt your chances?
+                    Choose whether this factor helps or hurts, then set the strength.
                   </Text>
-                  <View style={styles.sliderRow}>
-                    <Text style={styles.sliderMinLabel}>Hurts (0%)</Text>
-                    <Slider
-                      style={styles.slider}
-                      minimumValue={0}
-                      maximumValue={1}
-                      value={qualitativeConfidence}
-                      onValueChange={setQualitativeConfidence}
-                      minimumTrackTintColor="#3b82f6"
-                      maximumTrackTintColor="#e5e7eb"
-                      thumbTintColor="#3b82f6"
-                    />
-                    <Text style={styles.sliderMaxLabel}>Helps (100%)</Text>
+                  
+                  {/* Direction Buttons */}
+                  <View style={styles.directionButtonRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.directionButton,
+                        qualitativeConfidence < 0.5 ? styles.directionButtonActive : styles.directionButtonInactive
+                      ]}
+                      onPress={() => setQualitativeConfidence(0.25)}
+                    >
+                      <Text style={[
+                        styles.directionButtonText,
+                        qualitativeConfidence < 0.5 && styles.directionButtonTextActive
+                      ]}>❌ Hurts Success</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.directionButton,
+                        qualitativeConfidence > 0.5 ? styles.directionButtonActive : styles.directionButtonInactive
+                      ]}
+                      onPress={() => setQualitativeConfidence(0.75)}
+                    >
+                      <Text style={[
+                        styles.directionButtonText,
+                        qualitativeConfidence > 0.5 && styles.directionButtonTextActive
+                      ]}>✅ Helps Success</Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {/* Strength Slider */}
+                  <View style={styles.strengthContainer}>
+                    <Text style={styles.strengthLabel}>Strength: {(Math.abs(qualitativeConfidence - 0.5) * 200).toFixed(0)}%</Text>
+                    <View style={styles.sliderRow}>
+                      <Text style={styles.sliderMinLabel}>Weak</Text>
+                      <Slider
+                        style={styles.slider}
+                        minimumValue={0}
+                        maximumValue={1}
+                        value={qualitativeConfidence}
+                        onValueChange={setQualitativeConfidence}
+                        minimumTrackTintColor={qualitativeConfidence < 0.5 ? "#dc2626" : "#16a34a"}
+                        maximumTrackTintColor="#e5e7eb"
+                        thumbTintColor={qualitativeConfidence < 0.5 ? "#dc2626" : "#16a34a"}
+                      />
+                      <Text style={styles.sliderMaxLabel}>Strong</Text>
+                    </View>
                   </View>
                 </View>
 
+                {/* Simplified Importance Slider */}
                 <View style={styles.sliderContainer}>
-                  <Text style={styles.sliderLabel}>
-                    Weight in Equation: {(qualitativeWeight * 100).toFixed(0)}%
-                  </Text>
+                  <Text style={styles.sliderLabel}>⚖️ How important is this factor? ({(qualitativeWeight * 100).toFixed(0)}%)</Text>
                   <Text style={styles.sliderDescription}>
-                    How important is this factor for your specific prediction?
+                    Rate the importance for your specific prediction scenario.
                   </Text>
                   <View style={styles.sliderRow}>
-                    <Text style={styles.sliderMinLabel}>Minor (0%)</Text>
+                    <Text style={styles.sliderMinLabel}>Minor</Text>
                     <Slider
                       style={styles.slider}
                       minimumValue={0}
                       maximumValue={1}
                       value={qualitativeWeight}
                       onValueChange={setQualitativeWeight}
-                      minimumTrackTintColor="#10b981"
+                      minimumTrackTintColor="#8b5cf6"
                       maximumTrackTintColor="#e5e7eb"
-                      thumbTintColor="#10b981"
+                      thumbTintColor="#8b5cf6"
                     />
-                    <Text style={styles.sliderMaxLabel}>Critical (100%)</Text>
+                    <Text style={styles.sliderMaxLabel}>Critical</Text>
                   </View>
                 </View>
 
@@ -650,13 +806,14 @@ const OrganizedSmartMetricInput: React.FC<OrganizedSmartMetricInputProps> = ({ o
       </View>
 
       {/* Preview */}
-      {(metrics.length > 0 || qualitativeMetrics.length > 0) && (
+      {(metrics.length > 0 || qualitativeMetrics.length > 0 || categoricalMetrics.length > 0) && (
         <View style={styles.previewContainer}>
           <Text style={styles.previewTitle}>📝 Context Preview:</Text>
           <Text style={styles.previewText}>
             {[
               ...metrics.map(m => `${m.key}: ${m.value} ${m.unit}`),
-              ...qualitativeMetrics.map(q => `${q.tag}_ratio: ${q.confidence.toFixed(2)}, ${q.tag}_weight: ${q.weight.toFixed(2)}`)
+              ...qualitativeMetrics.map(q => `${q.tag}_ratio: ${q.confidence.toFixed(2)}, ${q.tag}_weight: ${q.weight.toFixed(2)}`),
+              ...categoricalMetrics.map(c => `${c.type}: ${c.value}`)
             ].join(', ')}
           </Text>
         </View>
@@ -972,6 +1129,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   
+  // Categorical Section Styles  
+  categoricalSection: {
+    backgroundColor: '#f0f9ff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#0284c7',
+  },
+  categoricalSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0c4a6e',
+    marginBottom: 8,
+  },
+  categoricalSectionDescription: {
+    fontSize: 14,
+    color: '#0369a1',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  
   // Preview
   previewContainer: {
     backgroundColor: '#f0fdf4',
@@ -1138,6 +1317,47 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
+  },
+  
+  // Improved Qualitative UI Styles
+  directionButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  directionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    alignItems: 'center',
+  },
+  directionButtonActive: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#3b82f6',
+  },
+  directionButtonInactive: {
+    backgroundColor: '#f9fafb',
+    borderColor: '#d1d5db',
+  },
+  directionButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  directionButtonTextActive: {
+    color: '#3b82f6',
+  },
+  strengthContainer: {
+    marginTop: 12,
+  },
+  strengthLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    textAlign: 'center',
+    marginBottom: 8,
   },
 });
 

@@ -20,7 +20,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.mirroros.app",
-      buildNumber: "10",
+      buildNumber: "35",
       infoPlist: {
         NSCameraUsageDescription: "This app does not use the camera.",
         NSMicrophoneUsageDescription: "This app does not use the microphone."
