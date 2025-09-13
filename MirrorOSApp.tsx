@@ -12,8 +12,6 @@ import {
   Dimensions,
 } from 'react-native';
 import Constants from 'expo-constants';
-import { Picker } from '@react-native-picker/picker';
-import OrganizedSmartMetricInput from './OrganizedSmartMetricInput';
 
 const { width } = Dimensions.get('window');
 
@@ -58,8 +56,6 @@ interface PredictionResult {
 const MirrorOSApp: React.FC = () => {
   const [goal, setGoal] = useState('');
   const [context, setContext] = useState('');
-  const [structuredMetrics, setStructuredMetrics] = useState<Record<string, any>>({});
-  const [selectedDomain, setSelectedDomain] = useState('auto');
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentView, setCurrentView] = useState<'input' | 'analysis' | 'results'>('input');
@@ -68,16 +64,6 @@ const MirrorOSApp: React.FC = () => {
 
   const API_URL = Constants.expoConfig?.extra?.apiUrl || "https://yyk4197cr6.execute-api.us-east-2.amazonaws.com/prod/api";
 
-  const domains = [
-    { label: 'Auto-Detect 🤖', value: 'auto' },
-    { label: 'Career 💼', value: 'career' },
-    { label: 'Finance 💰', value: 'finance' },
-    { label: 'Fitness 💪', value: 'fitness' },
-    { label: 'Dating 💕', value: 'dating' },
-    { label: 'Academic 🎓', value: 'academic' },
-    { label: 'Business 🚀', value: 'business' },
-    { label: 'Travel ✈️', value: 'travel' },
-  ];
 
   const analysisSteps = [
     { icon: '🎯', title: 'Question Analysis', subtitle: 'AI-powered domain detection' },
@@ -104,13 +90,6 @@ const MirrorOSApp: React.FC = () => {
     }
   }, [currentView]);
 
-  const handleMetricsChange = (contextString: string) => {
-    setContext(contextString);
-    
-    // Count metrics for display
-    const metricCount = contextString.split(',').filter(part => part.trim().includes(':')).length;
-    setStructuredMetrics({ count: metricCount, raw: contextString });
-  };
 
   const handlePredict = async () => {
     if (!goal.trim()) {
@@ -118,10 +97,6 @@ const MirrorOSApp: React.FC = () => {
       return;
     }
     
-    if (!structuredMetrics.count || structuredMetrics.count === 0) {
-      Alert.alert('Info', 'Add some metrics about your current situation for better predictions!');
-      // Allow proceeding without metrics for basic analysis
-    }
 
     setLoading(true);
     setCurrentView('analysis');
@@ -137,8 +112,7 @@ const MirrorOSApp: React.FC = () => {
         body: JSON.stringify({
           prediction_data: {
             goal: goal.trim(),
-            context: context.trim(),
-            domain: selectedDomain,
+            context: context.trim()
           },
         }),
       });
@@ -190,29 +164,23 @@ const MirrorOSApp: React.FC = () => {
         />
       </View>
 
-      {/* Organized Smart Metric Input */}
+      {/* Context Input */}
       <View style={styles.inputSection}>
-        <OrganizedSmartMetricInput
-          onMetricsChange={handleMetricsChange}
+        <Text style={styles.inputLabel}>📝 Tell us about your current situation</Text>
+        <TextInput
+          style={styles.textAreaInput}
+          value={context}
+          onChangeText={setContext}
+          placeholder="e.g., Northwestern grad, age 23, work 4hrs/day, make $3k/week, have 2 years experience, 6 month timeline"
+          placeholderTextColor="#999"
+          multiline
+          numberOfLines={5}
         />
+        <Text style={styles.helpText}>
+          Examples: education, age, experience, income, timeline, location, skills, etc.
+        </Text>
       </View>
 
-      {/* Domain Selection */}
-      <View style={styles.inputSection}>
-        <Text style={styles.inputLabel}>🎨 Domain (Optional)</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={selectedDomain}
-            onValueChange={setSelectedDomain}
-            style={styles.picker}
-            itemStyle={styles.pickerItem}
-          >
-            {domains.map(domain => (
-              <Picker.Item key={domain.value} label={domain.label} value={domain.value} />
-            ))}
-          </Picker>
-        </View>
-      </View>
 
       {/* Advanced Features Highlight */}
       <View style={styles.featuresSection}>
@@ -241,17 +209,13 @@ const MirrorOSApp: React.FC = () => {
       <TouchableOpacity 
         style={[
           styles.predictButton, 
-          (!goal.trim()) && styles.predictButtonDisabled,
-          (structuredMetrics.count > 0) && styles.predictButtonEnhanced
+          (!goal.trim()) && styles.predictButtonDisabled
         ]}
         onPress={handlePredict}
         disabled={!goal.trim()}
       >
         <Text style={styles.predictButtonText}>
-          {structuredMetrics.count > 0 
-            ? `🚀 Analyze with ${structuredMetrics.count} Metrics`
-            : '🔮 Analyze Future Probability'
-          }
+          🔮 Analyze Future Probability
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -540,18 +504,21 @@ const styles = StyleSheet.create({
     minHeight: 60,
     textAlignVertical: 'top',
   },
-  pickerContainer: {
+  textAreaInput: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderRadius: 12,
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 50,
-  },
-  pickerItem: {
+    padding: 16,
     fontSize: 16,
+    minHeight: 120,
+    textAlignVertical: 'top',
+  },
+  helpText: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 
   // Features Section
@@ -610,10 +577,6 @@ const styles = StyleSheet.create({
   predictButtonDisabled: {
     backgroundColor: '#9ca3af',
     shadowOpacity: 0,
-  },
-  predictButtonEnhanced: {
-    backgroundColor: '#059669',
-    shadowColor: '#059669',
   },
   predictButtonText: {
     color: '#ffffff',
